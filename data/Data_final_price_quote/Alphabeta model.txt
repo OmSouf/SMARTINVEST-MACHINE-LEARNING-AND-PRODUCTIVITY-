@@ -1,0 +1,64 @@
+### Risk free rate
+RFR=read.xlsx('C:/Users/soufiane/Desktop/US10Y.xlsx',header=TRUE, sheetIndex=1) # read spreadsheet
+keeps<-c("Date","Price")
+RFR=RFR[,keeps]
+RFR$Date<- mdy(RFR$Date)
+RFRxts <- xts(RFR[,-1], order.by=as.Date(RFR[,1], "%Y-%m-%d"))
+
+
+### Benchmarking rate
+BR=read.xlsx('C:/Users/soufiane/Desktop/SP500.xlsx',header=TRUE, sheetIndex=1) # read spreadsheet
+keeps<-c("Date","Close")
+BR=BR[,keeps]
+BRxts <- xts(BR[,-1], order.by=as.Date(BR[,1], "%Y-%m-%d"))
+
+####create yearly database of monthlyReturn  
+Monthly.return.data.2000.2017= matrix(0,nrow=(2017-2000+1),ncol=1)
+rownames(Monthly.return.data.2000.2017)=paste(2000:2017)
+Monthly.return.data.2000.2017[,1]=paste("MRET_",2000:2017)
+
+for (k in 1:nrow(Monthly.return.data.2000.2017)){
+	if (rownames(Monthly.return.data.2000.2017)[k]==2000) {
+	Monthly.return.data.template= matrix(0,nrow=length(HQ.data),ncol=17)
+	rownames(Monthly.return.data.template)=HQ.data
+	colnames(Monthly.return.data.template)=c('02','03','04','05','06','07','08','09','10','11','12','Mean','Variance','Skewness','Kurtosis','CAPMBeta','CAPMAlpha')
+	} else {
+	Monthly.return.data.template= matrix(0,nrow=length(HQ.data),ncol=18)
+	rownames(Monthly.return.data.template)=HQ.data
+	colnames(Monthly.return.data.template)=c('01','02','03','04','05','06','07','08','09','10','11','12','Mean','Variance','Skewness','Kurtosis','CAPMBeta','CAPMAlpha')
+	}
+	for (j in 1:nrow(Monthly.return.data.template)) {
+		DS=get(rownames(Monthly.return.data.template)[j])
+		DS=DS[,"Close"]
+		DSmonthlyReturn<-monthlyReturn(DS)
+		for (i in 1:(ncol(Monthly.return.data.template)-6)){
+			Cond=paste0(rownames(Monthly.return.data.2000.2017)[k],colnames(Monthly.return.data.template)[i])
+			if (is.null(DSmonthlyReturn[Cond,which.i=TRUE])==FALSE){
+			Monthly.return.data.template[j,i]=DSmonthlyReturn[Cond]
+			}else{Monthly.return.data.template[j,i]=NA}
+			}
+			
+			Cond.year=rownames(Monthly.return.data.2000.2017)[k]
+			if (is.null(DSmonthlyReturn[Cond.year,which.i=TRUE])==FALSE){
+			Monthly.return.data.template[j,'CAPMBeta']=CAPM.beta(monthlyReturn(DS)[Cond.year],monthlyReturn(BRxts)[Cond.year],monthlyReturn(RFRxts)[Cond.year])
+			Monthly.return.data.template[j,'CAPMAlpha']=CAPM.alpha(monthlyReturn(DS)[Cond.year],monthlyReturn(BRxts)[Cond.year],monthlyReturn(RFRxts)[Cond.year])
+			Monthly.return.data.template[j,'Mean']=mean(DSmonthlyReturn[Cond.year], na.rm = TRUE)
+			Monthly.return.data.template[j,'Variance']=var(DSmonthlyReturn[Cond.year], na.rm = TRUE)
+			Monthly.return.data.template[j,'Skewness']=skewness(DSmonthlyReturn[Cond.year], na.rm = TRUE)
+			Monthly.return.data.template[j,'Kurtosis']=kurtosis(DSmonthlyReturn[Cond.year], na.rm = TRUE)
+			}else{
+			Monthly.return.data.template[j,'CAPMBeta']=NA
+			Monthly.return.data.template[j,'CAPMAlpha']=NA
+			Monthly.return.data.template[j,'Mean']=NA
+			Monthly.return.data.template[j,'Variance']=NA
+			Monthly.return.data.template[j,'Skewness']=NA
+			Monthly.return.data.template[j,'Kurtosis']=NA
+			}
+		}
+	
+	assign(Monthly.return.data.2000.2017[k,1],Monthly.return.data.template)
+	}
+
+
+
+
